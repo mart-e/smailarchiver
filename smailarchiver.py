@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-""" SMail archiver 0.1
+""" SMail archiver 0.2
 
 Secured mail archiver
 All mails are encypted using AES256 and
@@ -19,6 +19,8 @@ import imaplib
 import json
 import os
 import sys
+
+import zlib
 
 # pycrypto
 from Crypto import Random
@@ -133,10 +135,13 @@ def decrypt_folder(foldername, key_file, promp):
     
     out_file = open(os.path.abspath(foldername)+'.mbox','w') # foo@bar.com/ -> foo@bar.com.mbox
     for filename in os.listdir(foldername):
-        if filename[-5:] == ".mbox":
+        if filename[-5:] == ".mbox":            
             print("Decrypting {}".format(filename))
             with open(os.path.join(foldername,filename),'r') as enc_file:
                 clear_text = decrypt(enc_file.read(), enc_key, sig_key)
+                if filename[-8:] == ".gz.mbox":
+                    clear_text = zlib.decompress(clear_text)
+                    
                 out_file.write(clear_text)
                 out_file.write("\n\n")
     out_file.close()
@@ -166,6 +171,8 @@ def load_configs(filename):
         assert 'keys' in config, "missing argument 'keys', no keyfile specified"
         assert 'promp' in config, "missing argument 'promp', does the keyfile needs a password ?"
         config['promp'] = bool(config['promp'])
+        assert 'compress' in config, "missing argument 'compress', should the data be compressed ?"
+        config['compress'] = bool(config['compress'])
 
     return config_dic
 
@@ -184,7 +191,7 @@ class EmailBackup():
         """Return the list of UID in the mailbox folder"""
         status, msg = self.m.select(mailbox, True)
         if status != 'OK':
-            raise AuthenticationError(msg[0])
+            raise Exception(msg[0])
     
         resp, items = self.m.uid('search', None, "ALL")
         self.items = items[0].split()
@@ -206,7 +213,7 @@ class EmailBackup():
         else:
             self.enc_key, self.sig_key = generate_new_keys(key_file, pwd)
 
-    def get_items(self):
+    def get_items(self, compress=False):
         """Fetch and encrypt each email in self.items"""
         # prepare the path
         foldername = self.user
@@ -219,12 +226,18 @@ class EmailBackup():
         # get the items
         count = len(self.items)
         for email_uid in self.items:
-            filename = os.path.join(foldername,"{}.mbox".format(email_uid))
+
+            # compressed file has .gz.mbox extension
+            if compress:
+                filename = os.path.join(foldername,"{}.gz.mbox".format(email_uid))
+            else:
+                filename = os.path.join(foldername,"{}.mbox".format(email_uid))
+
             if os.path.isfile(filename):
                 if self.verbose: print("Skipping email {0} ({1} remaining)".format(email_uid.decode(),count))
 
             else:
-                #if self.verbose: print("Downloading email {0} ({1} remaining)".format(email_uid.decode(),count))
+                if self.verbose: print("Downloading email {0} ({1} remaining)".format(email_uid.decode(),count))
                 result, data = self.m.uid('fetch', email_uid, '(RFC822)')
                 email_body = data[0][1]
                 # We duplicate the From: line to the beginning of the email because mbox format requires it.
@@ -239,18 +252,18 @@ class EmailBackup():
                 else:
                     email_body = "From {0}\n{1}".format(from_line[5:].strip(),email_body)
                 
-                enc_email_body = encrypt(email_body, self.enc_key, self.sig_key).encode('base64').replace("\n","")
-                print("Downloading email {0} ({1} remaining) {2}".format(email_uid.decode(),count,enc_email_body[-32:]))
-                if sys.version > '3':
-                    #file = open("{0}.mbox".format(user),'ab')
-                    file = open(filename,'ab')
-                    file.write(enc_email_body)
-                    #file.write(b"\n\n")
+                if compress:
+                    zip_body = zlib.compress(email_body)
+                    enc_email_body = encrypt(zip_body, self.enc_key, self.sig_key).encode('base64').replace("\n","")
                 else:
-                    #file = open("{0}.mbox".format(user),'a')
-                    file = open(filename,'a')
+                    enc_email_body = encrypt(email_body, self.enc_key, self.sig_key).encode('base64').replace("\n","")
+                
+                if sys.version > '3':
+                    file = open(filename,'wb')
                     file.write(enc_email_body)
-                    #file.write("\n\n")
+                else:
+                    file = open(filename,'w')
+                    file.write(enc_email_body)
                 file.close()
 
             count -= 1
@@ -268,6 +281,8 @@ if __name__ == "__main__":
 
     parser.add_argument("-c", "--config", help="JSON file containing a list of configuration")
     parser.add_argument("-d", "--decrypt", help="decrypt a folder containing encypted mbox")
+    
+    parser.add_argument("-z", "--compress", help="Compress the mail data before encrypting", action="store_true")
 
     parser.add_argument("--verbose", help="verbose mode", action="store_true")
     parser.add_argument('--version', action='version', version='%(prog)s {}'.format(VERSION))
@@ -275,7 +290,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.decrypt:
-        decrypt_folder(args.decrypt,args.keys,args.promp)
+        decrypt_folder(args.decrypt, args.keys, args.promp)
     else:
 
         if args.config:
@@ -284,11 +299,11 @@ if __name__ == "__main__":
                 if configs['verbose']: print("Backup for {0}@{1}".format(config['user'],config['imap']))
                 eb = EmailBackup(config['user'],config['imap'],config['passwd'],configs['verbose'])
                 if configs['verbose']: print("Get mail list")
-                eb.get_mail_list(config['folder'])
+                eb.get_mail_list(str(config['folder']))
                 if configs['verbose']: print("Get crypto keys")
                 eb.get_crypto_keys(config['keys'],config['promp'])
                 if configs['verbose']: print("Get items")
-                eb.get_items()
+                eb.get_items(config['compress'])
 
         else:
 
@@ -308,8 +323,8 @@ if __name__ == "__main__":
             if args.verbose: print("Backup for {0}@{1}".format(user,imap))
             eb = EmailBackup(user,imap,pwd,args.verbose)
             if args.verbose: print("Get mail list")
-            eb.get_mail_list(folder)
+            eb.get_mail_list(str(folder))
             if args.verbose: print("Get crypto keys")
             eb.get_crypto_keys(key_file, args.promp)
             if args.verbose: print("Get items")
-            eb.get_items()
+            eb.get_items(args.compress)
