@@ -178,7 +178,7 @@ class EmailBackup():
         self.verbose = verbose
 
         self.m = imaplib.IMAP4_SSL(imap)
-        self.m.login(user,pwd)
+        self.m.login(user,passwd)
 
     def get_mail_list(self,mailbox='INBOX'):
         """Return the list of UID in the mailbox folder"""
