@@ -6,8 +6,11 @@ Secured mail archiver
 All mails are encypted using AES256 and
 signed using HMAC-SHA256
 
-python 2.7 or above (py3k supported)
-library Pycrypto
+requirements: 
+  python 2.7 or above
+  Pycrypto
+
+Python 3 is still buggy and should work soon (I hope)
 """
 
 import argparse
@@ -111,6 +114,11 @@ def decrypt(data, aes_key, hmac_key, enc_key_size=AES_KEY_SIZE, enc_block_size=A
     return data[:-ord(data[-1])]
 
 def decrypt_folder(foldername, key_file, promp):
+    """Decrypt the content of foldername
+
+    Each .mbox file in the folder is decrypted using the specified key
+    the result is writen in a {foldername}.mbox file"""
+
     if promp:
         passwd = getpass.getpass("Enter your encryption/signature password: ")
     else:
@@ -135,6 +143,10 @@ def decrypt_folder(foldername, key_file, promp):
 
 
 def load_configs(filename):
+    """Load a JSON config file and check the validity
+
+    The format is shown in config.json.example file"""
+
     if not os.path.isfile(filename):
         raise OSError("{} does not exists".format(filename))
 
@@ -159,7 +171,7 @@ def load_configs(filename):
 
 class EmailBackup():
 
-    def __init__(self, user, imap, passwd,verbose=False):
+    def __init__(self, user, imap, passwd, verbose=False):
         self.user = user
         self.imap = imap
         self.passwd = passwd
@@ -169,6 +181,7 @@ class EmailBackup():
         self.m.login(user,pwd)
 
     def get_mail_list(self,mailbox='INBOX'):
+        """Return the list of UID in the mailbox folder"""
         status, msg = self.m.select(mailbox, True)
         if status != 'OK':
             raise AuthenticationError(msg[0])
@@ -178,6 +191,10 @@ class EmailBackup():
         if self.verbose: print("Found {0} emails.".format(len(self.items)))
 
     def get_crypto_keys(self, key_file, promp=False):
+        """Load the encryption and signature key
+
+        If no key exists, generate them
+        If prop is True, will use a submited password to protect the key"""
         if promp:
             pwd = getpass.getpass("Enter your encryption/signature password: ")
         else:
@@ -190,6 +207,7 @@ class EmailBackup():
             self.enc_key, self.sig_key = generate_new_keys(key_file, pwd)
 
     def get_items(self):
+        """Fetch and encrypt each email in self.items"""
         # prepare the path
         foldername = self.user
         if os.path.isfile(foldername):
