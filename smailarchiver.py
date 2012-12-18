@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-""" SMail archiver 0.2
+""" SMail archiver 0.3
 
 Secured mail archiver
 All mails are encypted using AES256 and
@@ -9,17 +9,15 @@ signed using HMAC-SHA256
 requirements: 
   python 2.7 or above
   Pycrypto
-
-Python 3 is still buggy and should work soon (I hope)
 """
 
 import argparse
+import base64
 import getpass
 import imaplib
 import json
 import os
 import sys
-
 import zlib
 
 # pycrypto
@@ -48,21 +46,31 @@ def generate_new_keys(key_file="keys", password=None, enc_key_size=AES_KEY_SIZE,
     rand_bytes = Random.get_random_bytes(enc_key_size + sig_key_size)
     
     # save the salt/secret
-    with open(key_file,'w') as f:
-        f.write(rand_bytes.encode("base64").replace("\n",""))
-
+    with open(key_file,'wb') as f:
+        f.write(base64.b64encode(rand_bytes))
+        
     if password:
         # derive the two keys using PBKDF2
         enc_key = PBKDF2(password, rand_bytes[:enc_key_size], dkLen=enc_key_size)
         sig_key = PBKDF2(password, rand_bytes[enc_key_size:], dkLen=sig_key_size)
+        hash_string = base64.b64encode(SHA256.new(rand_bytes+password.encode()).digest())
+        with open(key_file+".sha",'wb') as f:
+            f.write(hash_string)
+
+        print("Enc key: {0}\nSig key: {1}\nHash: {2}".format(
+            base64.b64encode(enc_key).decode(),
+            base64.b64encode(sig_key).decode(),
+            hash_string.decode()))
+
     else:
         # the keys are the random bytes
         enc_key = rand_bytes[:enc_key_size]
         sig_key = rand_bytes[enc_key_size:]
-
-    print("Enc key: {0}\nSig key: {1}".format(
-            enc_key.encode("base64").replace("\n",""),
-            sig_key.encode("base64").replace("\n","")))
+        
+        print("Enc key: {0}\nSig key: {1}".format(
+            base64.b64encode(enc_key).decode(),
+            base64.b64encode(sig_key).decode()))
+    
     return (enc_key, sig_key)
 
 
@@ -74,11 +82,19 @@ def load_keys(key_file, password=None, enc_key_size=AES_KEY_SIZE, sig_key_size=S
 
     with open(key_file,'r') as f:
         content = f.read()
-    rand_bytes = content.decode('base64')
-
+    rand_bytes = base64.b64decode(content)
+    
     assert len(rand_bytes) == enc_key_size + sig_key_size, "invalid key"
-
+    
     if password:
+        # verifiy the password
+        if not os.path.isfile(key_file+".sha"):
+            raise Exception("No hash file found, can not guarantee the password")
+        else:
+            hash_string = base64.b64encode(SHA256.new(rand_bytes+password.encode()).digest())
+            with open(key_file+".sha",'r') as f:
+                assert f.read().encode() == hash_string, "Hash validation failed"
+
         # derive the two keys using PBKDF2
         enc_key = PBKDF2(password, rand_bytes[:enc_key_size], dkLen=enc_key_size)
         sig_key = PBKDF2(password, rand_bytes[enc_key_size:], dkLen=sig_key_size)
@@ -93,7 +109,7 @@ def load_keys(key_file, password=None, enc_key_size=AES_KEY_SIZE, sig_key_size=S
 def encrypt(data, aes_key, hmac_key, enc_key_size=AES_KEY_SIZE, enc_block_size=AES_BLOCK_SIZE, sig_key_size=SIG_SIZE):
     """encrypt data with AES-CBC and sign it with HMAC-SHA256"""
     pad = enc_key_size - len(data) % sig_key_size
-    data = data + pad * chr(pad)
+    data = data + pad * chr(pad).encode()
     iv_bytes = Random.get_random_bytes(enc_block_size)
     cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
     enc_data = iv_bytes + cypher.encrypt(data)
@@ -103,7 +119,7 @@ def encrypt(data, aes_key, hmac_key, enc_key_size=AES_KEY_SIZE, enc_block_size=A
 def decrypt(data, aes_key, hmac_key, enc_key_size=AES_KEY_SIZE, enc_block_size=AES_BLOCK_SIZE, sig_key_size=SIG_SIZE):
     """Verify HMAC-SHA256 signature and decrypt data with AES-CBC"""
     #aes_key, hmac_key = keys
-    data = data.decode('base64')
+    data = base64.b64decode(data)
     sig = data[-sig_key_size:]
     data = data[:-sig_key_size]
     
@@ -113,7 +129,15 @@ def decrypt(data, aes_key, hmac_key, enc_key_size=AES_KEY_SIZE, enc_block_size=A
     data = data[enc_block_size:]
     cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
     data = cypher.decrypt(data)
-    return data[:-ord(data[-1])]
+    
+    # eg: data = b'...\x03\x03\x03'
+    if sys.version > '3':
+        # data[-1] = 3, int
+        return data[:-data[-1]]
+    else:
+        # data[-1]  = '\x03', str
+        return data[:-ord(data[-1])]
+
 
 def decrypt_folder(foldername, key_file, promp):
     """Decrypt the content of foldername
@@ -133,17 +157,18 @@ def decrypt_folder(foldername, key_file, promp):
     if not os.path.isdir(args.decrypt):
         raise OSError("Folder {} does not exists".format(args.decrypt))
     
-    out_file = open(os.path.abspath(foldername)+'.mbox','w') # foo@bar.com/ -> foo@bar.com.mbox
+    out_file = open(os.path.abspath(foldername)+'.mbox','wb') # foo@bar.com/ -> foo@bar.com.mbox
     for filename in os.listdir(foldername):
         if filename[-5:] == ".mbox":            
             print("Decrypting {}".format(filename))
             with open(os.path.join(foldername,filename),'r') as enc_file:
                 clear_text = decrypt(enc_file.read(), enc_key, sig_key)
-                if filename[-8:] == ".gz.mbox":
-                    clear_text = zlib.decompress(clear_text)
+                
+            if filename[-8:] == ".gz.mbox":
+                clear_text = zlib.decompress(clear_text)
                     
-                out_file.write(clear_text)
-                out_file.write("\n\n")
+            out_file.write(clear_text)
+            out_file.write(b"\n\n")
     out_file.close()
 
 
@@ -229,9 +254,9 @@ class EmailBackup():
 
             # compressed file has .gz.mbox extension
             if compress:
-                filename = os.path.join(foldername,"{}.gz.mbox".format(email_uid))
+                filename = os.path.join(foldername,"{}.gz.mbox".format(email_uid.decode()))
             else:
-                filename = os.path.join(foldername,"{}.mbox".format(email_uid))
+                filename = os.path.join(foldername,"{}.mbox".format(email_uid.decode()))
 
             if os.path.isfile(filename):
                 if self.verbose: print("Skipping email {0} ({1} remaining)".format(email_uid.decode(),count))
@@ -247,24 +272,17 @@ class EmailBackup():
                 except IndexError:
                     print("  'from:' unreadable.")
             
-                if sys.version > '3':
-                    email_body = b"From "+from_line[5:].strip()+b"\n"+email_body
-                else:
-                    email_body = "From {0}\n{1}".format(from_line[5:].strip(),email_body)
+                email_body = b"From "+from_line[5:].strip()+b"\n"+email_body
                 
                 if compress:
                     zip_body = zlib.compress(email_body)
-                    enc_email_body = encrypt(zip_body, self.enc_key, self.sig_key).encode('base64').replace("\n","")
+                    enc_email_body = base64.b64encode(encrypt(zip_body, self.enc_key, self.sig_key))
                 else:
-                    enc_email_body = encrypt(email_body, self.enc_key, self.sig_key).encode('base64').replace("\n","")
+                    enc_email_body = base64.b64encode(encrypt(email_body, self.enc_key, self.sig_key))
+                    
                 
-                if sys.version > '3':
-                    file = open(filename,'wb')
-                    file.write(enc_email_body)
-                else:
-                    file = open(filename,'w')
-                    file.write(enc_email_body)
-                file.close()
+                with open(filename,'wb') as f:
+                    f.write(enc_email_body)
 
             count -= 1
 
