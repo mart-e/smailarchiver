@@ -1,0 +1,71 @@
+SMail Archiver is a python script that can be used to backup an email account
+It uses the pycrypto library and requires python 2.7 or above.
+python 3.x does not work yet but this should be fixed in further release
+
+Backup:
+    The emails are fetch using IMAP. UID of emails are used to identify emails.
+    Each mail is saved in {user}/{uid}.mbox.
+    Running the command several time won't overwrite the files, existing mbox
+    file are ignored.
+
+Restore:
+    When restoring a backup, the script read the content of the specified backup
+    folder and, for each .mbox file, decrypt it and store the result in a unique
+    mbox file using the format {foldername}.mbox, overwritting potential
+    previous restoration.
+    
+    .mbox files present in the folder but not part of the backup are likely to
+    make the program crash. Other type of files are ignored.
+    
+Security:
+    The script uses AES256 in CBC mode for encryption and HMAC-SHA256 for 
+    signature. The size of the AES key can be changed with the variable 
+    AES_KEY_SIZE (16, 24, 32). Use a different algorithms is not proposed as
+    requires more change in the code.
+    
+    Two possibles mode of security are possible : simple or password protected.
+    In simple mode (the variable {promp} is not set), no password from the user
+    is required, the two (AES and HMAC) keys are generated using a PRNG and are
+    the secret. The generated file SHOULD be protected in a secure way.
+    In password protected mode (the variable {promp} is true), a password is
+    asked and the two keys are generated using this password and random salt
+    using PBKDF2. The generated file contains the salt and should no longer be
+    protected. However, the strength of the encryption lies in the strength of 
+    the password and it could be an additionnal protection to protect the salt
+    file in case of weak password.
+
+Usage:
+    usage: smailarchiver [-h] [-u USER] [-i IMAP] [-p PASSWD] [-f FOLDER]
+                         [-k KEYS] [-P] [-c CONFIG] [-d DECRYPT] [--verbose]
+                         [--version]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -u USER, --user USER  email username
+      -i IMAP, --imap IMAP  IMAP email server
+      -p PASSWD, --passwd PASSWD
+                            email password
+      -f FOLDER, --folder FOLDER
+                            inbox folder name
+      -k KEYS, --keys KEYS  key/salt file
+      -P, --promp           promp for password of keys
+      -c CONFIG, --config CONFIG
+                            JSON file containing a list of configuration
+      -d DECRYPT, --decrypt DECRYPT
+                            decrypt a folder containing encypted mbox
+      --verbose             verbose mode
+      --version             show program's version number and exit
+
+    The optional -c CONGIF use a JSON file containing the configuration (useful
+    for cronjob for instance). It can contains the configuration for several 
+    mail accounts. An example of the format used is present in 
+    config.json.example.
+
+    The option -d DECRYPT requires the name of the folder containing the backup
+    files. The restored emails will be stored in the {DECRYPT}.mbox file.
+
+Licence:
+    "THE BEER-WARE LICENSE" (Revision 42):
+    <me@mart-e.be> wrote this file. As long as you retain this notice you
+    can do whatever you want with this stuff. If we meet some day, and you think
+    this stuff is worth it, you can buy me a beer in return Martin Trigaux
