@@ -1,0 +1,17 @@
+{"list":
+ [
+     {"user":"foo@bar.com",
+      "imap":"imap.bar.com",
+      "passwd":"monkey1",
+      "folder":"INBOX",
+      "keys":"foo.keys",
+      "promp":0},
+     {"user":"alice@example.com",
+      "imap":"imap.example.com",
+      "passwd":"qwerty1",
+      "folder":"Sent",
+      "keys":"alice.keys",
+      "promp":0}
+ ],
+ "verbose":1
+}
