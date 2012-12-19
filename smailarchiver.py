@@ -294,7 +294,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--imap", help="IMAP email server") # "imap.bar.com"
     parser.add_argument("-p", "--passwd", help="email password") # "password"
     parser.add_argument("-f", "--folder", help="inbox folder name", default="INBOX") # '"[Gmail]/All Mail"'
-    parser.add_argument("-k", "--keys", help="key/salt file", default="keys.aes")
+    parser.add_argument("-k", "--keys", help="key/salt file", default="keys")
     parser.add_argument("-P", "--promp", help="promp for password of keys", action="store_true")
 
     parser.add_argument("-c", "--config", help="JSON file containing a list of configuration")
@@ -341,8 +341,9 @@ if __name__ == "__main__":
             if args.verbose: print("Backup for {0}@{1}".format(user,imap))
             eb = EmailBackup(user,imap,pwd,args.verbose)
             if args.verbose: print("Get mail list")
-            eb.get_mail_list(str(folder))
+            eb.get_mail_list(str(args.folder))
             if args.verbose: print("Get crypto keys")
-            eb.get_crypto_keys(key_file, args.promp)
+            eb.get_crypto_keys(args.keys, args.promp)
             if args.verbose: print("Get items")
             eb.get_items(args.compress)
+    
