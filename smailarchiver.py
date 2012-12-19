@@ -50,14 +50,14 @@ def generate_new_keys(key_file="keys", password=None, enc_key_size=AES_KEY_SIZE,
         f.write(base64.b64encode(rand_bytes))
         
     if password:
-        # derive the two keys using PBKDF2
+        # derive the two keys using PBKDF2 and the salt
         enc_key = PBKDF2(password, rand_bytes[:enc_key_size], dkLen=enc_key_size)
         sig_key = PBKDF2(password, rand_bytes[enc_key_size:], dkLen=sig_key_size)
         hash_string = base64.b64encode(SHA256.new(rand_bytes+password.encode()).digest())
         with open(key_file+".sha",'wb') as f:
             f.write(hash_string)
 
-        print("Enc key: {0}\nSig key: {1}\nHash: {2}".format(
+        print("Enc salt: {0}\nSig salt: {1}\nHash: {2}".format(
             base64.b64encode(enc_key).decode(),
             base64.b64encode(sig_key).decode(),
             hash_string.decode()))
