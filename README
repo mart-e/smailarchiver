@@ -67,6 +67,43 @@ Usage:
     The option -d DECRYPT requires the name of the folder containing the backup
     files. The restored emails will be stored in the {DECRYPT}.mbox file.
 
+IMAP folder:
+    The saved folder is specified in the variable {folder}. By default "INBOX"
+    is used which should be available on many emails provider.
+    
+    In the case of Gmail, all emails can be saved easily using the name 
+    '"[Gmail]/All Mail"'. Note that this name can be change depending of the
+    language of your email account or not available in IMAP. Read the following
+    page for more information :
+    http://www.sebsauvage.net/wiki/doku.php?id=gmail_archiver
+    
+    When using a folder name with spaces (like in the Gmail example above), you
+    may need to double-quote the name ('"folder name"' or "'folder name'") in
+    Python 3.x
+
+    To know which IMAP folders are available, open a python promp and use the 
+    following code :
+
+    >>> import imaplib
+    >>> m = imaplib.IMAP4_SSL("imap.bar.com")
+    >>> m.login("foo@bar.com","mypasword")
+    ('OK', [b'Logged in'])
+    >>> m.list()
+    ('OK', [b'(\\HasNoChildren) "." "Junk"', b'(\\HasNoChildren) "." "Trash"', b
+    '(\\HasNoChildren) "." "Drafts"', b'(\\HasNoChildren) "." "Sent"', b'(\\HasN
+    oChildren) "." "INBOX"'])
+
+    (or `m.list("foldername")` for the subfolders)
+    
+    You can specify only one IMAP folder per configuration. However, you can
+    configure several sites for the same email account in the the config.json
+    file. Note that the destination folder is specified using the {user} 
+    variable and emails from the same account will be merged. Emails are
+    identified with UID which are unique per message. Emails with the same UID
+    in the destination folder ({UID}.mbox or {UID}.gz.mbox) are skipped during
+    the save process. At the decryption process, all emails in the folder will
+    be merged in a {user}.mbox file.
+
 Licence:
     "THE BEER-WARE LICENSE" (Revision 42):
     <me@mart-e.be> wrote this file. As long as you retain this notice you
