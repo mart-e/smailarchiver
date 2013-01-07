@@ -298,7 +298,9 @@ if __name__ == "__main__":
     parser.add_argument("-P", "--promp", help="promp for password of keys", action="store_true")
 
     parser.add_argument("-c", "--config", help="JSON file containing a list of configuration")
-    parser.add_argument("-d", "--decrypt", help="decrypt a folder containing encypted mbox")
+    parser.add_argument("-r", "--restore", help="restore the mails contained in a folder. "\
+                            "Extension is used to determine the storage type. "\
+                            "Restored in a single .mbox file.")
     
     parser.add_argument("-z", "--compress", help="Compress the mail data before encrypting", action="store_true")
 
