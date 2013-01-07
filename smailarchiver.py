@@ -285,7 +285,7 @@ class EmailBackup():
         count = len(self.items)
         for email_uid in self.items:
 
-            filename = os.path.join("{}.mbox".format(email_uid.decode()))
+            filename = os.path.join(foldername,"{}.mbox".format(email_uid.decode()))
             if self.compress:
                 # compressed file has a .gz extension
                 filename = "{}.gz".format(filename)
