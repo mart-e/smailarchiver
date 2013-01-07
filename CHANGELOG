@@ -1,0 +1,12 @@
+2012-01-07 0.4
+    * --decrypt option becomes --restore
+    * extension file makes more sense (.mbox.gz.enc means mbox -> compression -> encryption)
+    * encryption is now optional
+    * config file takes arguments 'encrypt' and 'compress'
+	
+2012-12-19 0.3
+    * Initial functional release
+    * Encryption and decrytion
+    * Compression and decompression
+    * Config file
+
