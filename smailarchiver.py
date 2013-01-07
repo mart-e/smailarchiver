@@ -262,8 +262,17 @@ class EmailBackup():
         else:
             self.enc_key, self.sig_key = generate_new_keys(key_file, pwd)
 
-    def get_items(self, compress=False):
-        """Fetch and encrypt each email in self.items"""
+    def get_items(self):
+        """Fetch and process each email in self.items
+        
+        Depending of the arguments the files will be compressed or/and encrypted
+        The files' extensions depends of the parameters
+        .mbox is always used (initial mail format when retrieved)
+        .gz is added if compression is enabled
+        .enc is added if encryption is enabled
+        compression is always done before encryption (better results)
+        a compressed and encypted mail will be stored as file.mbox.gz.enc"""
+        
         # prepare the path
         foldername = self.user
         if os.path.isfile(foldername):
@@ -276,15 +285,17 @@ class EmailBackup():
         count = len(self.items)
         for email_uid in self.items:
 
-            # compressed file has .gz.mbox extension
-            if compress:
-                filename = os.path.join(foldername,"{}.gz.mbox".format(email_uid.decode()))
-            else:
-                filename = os.path.join(foldername,"{}.mbox".format(email_uid.decode()))
+            filename = os.path.join("{}.mbox".format(email_uid.decode()))
+            if self.compress:
+                # compressed file has a .gz extension
+                filename = "{}.gz".format(filename)
+            if self.encrypt:
+                # encrypted file has a .enc extension
+                filename = "{}.enc".format(filename)
 
             if os.path.isfile(filename):
                 if self.verbose: print("Skipping email {0} ({1} remaining)".format(email_uid.decode(),count))
-
+                
             else:
                 if self.verbose: print("Downloading email {0} ({1} remaining)".format(email_uid.decode(),count))
                 result, data = self.m.uid('fetch', email_uid, '(RFC822)')
@@ -298,15 +309,14 @@ class EmailBackup():
             
                 email_body = b"From "+from_line[5:].strip()+b"\n"+email_body
                 
-                if compress:
-                    zip_body = zlib.compress(email_body)
-                    enc_email_body = base64.b64encode(encrypt(zip_body, self.enc_key, self.sig_key))
-                else:
-                    enc_email_body = base64.b64encode(encrypt(email_body, self.enc_key, self.sig_key))
-                    
-                
+                if self.compress:
+                    email_body = zlib.compress(email_body)
+
+                if self.encrypt:
+                    email_body = base64.b64encode(encrypt(email_body, self.enc_key, self.sig_key))
+
                 with open(filename,'wb') as f:
-                    f.write(enc_email_body)
+                    f.write(email_body)
 
             count -= 1
 
@@ -355,7 +365,7 @@ if __name__ == "__main__":
                     eb.get_crypto_keys(config['keys'],config['promp'])
                 
                 if configs['verbose']: print("Get items")
-                eb.get_items(config['compress'])
+                eb.get_items()
 
         else:
 
@@ -384,5 +394,5 @@ if __name__ == "__main__":
                 eb.get_crypto_keys(args.keys, args.promp)
             
             if args.verbose: print("Get items")
-            eb.get_items(args.compress)
+            eb.get_items()
     
