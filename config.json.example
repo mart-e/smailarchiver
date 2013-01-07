@@ -4,14 +4,16 @@
       "imap":"imap.bar.com",
       "passwd":"monkey1",
       "folder":"INBOX",
+      "encyrpt":1,
       "keys":"foo.keys",
-      "promp":0},
+      "promp":1,
+      "compress":1},
      {"user":"alice@example.com",
       "imap":"imap.example.com",
       "passwd":"qwerty1",
+      "encrypt":0,
       "folder":"Sent",
-      "keys":"alice.keys",
-      "promp":0}
+      "compress":0}
  ],
  "verbose":1
 }
