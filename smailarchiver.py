@@ -77,7 +77,8 @@ def generate_new_keys(key_file="keys", password=None, enc_key_size=AES_KEY_SIZE,
 def load_keys(key_file, password=None, enc_key_size=AES_KEY_SIZE, sig_key_size=SIG_SIZE):
     """ Load the keys from the specified file
     
-    If a password is specified, the key file contains the salt that is used to generate the key using PBKDF2 and the password
+    If a password is specified, the key file contains the salt that is used to 
+        generate the key using PBKDF2 and the password
     If no password is specified, the key will be the content of the key file"""
 
     with open(key_file,'r') as f:
@@ -139,11 +140,18 @@ def decrypt(data, aes_key, hmac_key, enc_key_size=AES_KEY_SIZE, enc_block_size=A
         return data[:-ord(data[-1])]
 
 
-def decrypt_folder(foldername, key_file, promp):
-    """Decrypt the content of foldername
+def restore_folder(foldername, key_file, promp):
+    """Restore the content of foldername to a single mbox file
 
-    Each .mbox file in the folder is decrypted using the specified key
-    the result is writen in a {foldername}.mbox file"""
+    Each mbox file in the folder is read and, if needed, decrypted and/or 
+    decompressed in the reverse order of extension
+    eg: 1.mbox.gz.enc -> read -> decryption -> decompression -> write
+    supported :
+        .mbox
+        .mbox.gz
+        .mbox.gz.enc
+        .mbox.enc
+    The result is writen in a {foldername}.mbox file"""
 
     if promp:
         passwd = getpass.getpass("Enter your encryption/signature password: ")
@@ -154,21 +162,30 @@ def decrypt_folder(foldername, key_file, promp):
         raise OSError("Keyfile {} does not exists".format(key_file))
     enc_key, sig_key = load_keys(key_file, passwd)
     
-    if not os.path.isdir(args.decrypt):
-        raise OSError("Folder {} does not exists".format(args.decrypt))
+    if not os.path.isdir(foldername):
+        raise OSError("Folder {} does not exists".format(foldername))
     
     out_file = open(os.path.abspath(foldername)+'.mbox','wb') # foo@bar.com/ -> foo@bar.com.mbox
     for filename in os.listdir(foldername):
-        if filename[-5:] == ".mbox":            
+        if filename[-9:] == ".mbox.enc" or filename[-12:] == ".mbox.gz.enc" or \
+            filename[-8:] == ".mbox.gz" or filename[-5:] == ".mbox":
+            with open(os.path.join(foldername,filename),'r') as mbox_file:
+                file_content = mbox_file.read()
+
+        if filename[-9:] == ".mbox.enc" or filename[-12:] == ".mbox.gz.enc":
             print("Decrypting {}".format(filename))
-            with open(os.path.join(foldername,filename),'r') as enc_file:
-                clear_text = decrypt(enc_file.read(), enc_key, sig_key)
-                
-            if filename[-8:] == ".gz.mbox":
-                clear_text = zlib.decompress(clear_text)
-                    
-            out_file.write(clear_text)
+            file_content = decrypt(file_content, enc_key, sig_key)
+            
+        if filename[-8:] == ".mbox.gz" or filename[-12:] == ".mbox.gz.enc":
+            print("Decompressing {}".format(filename))
+            file_content = zlib.decompress(file_content)
+
+        if file_content:
+            out_file.write(file_content)
             out_file.write(b"\n\n")
+
+        file_content = ""
+
     out_file.close()
 
 
@@ -309,8 +326,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.decrypt:
-        decrypt_folder(args.decrypt, args.keys, args.promp)
+    if args.restore:
+        restore_folder(args.restore, args.keys, args.promp)
     else:
 
         if args.config:
