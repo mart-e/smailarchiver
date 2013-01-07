@@ -316,7 +316,7 @@ if __name__ == "__main__":
         if args.config:
             configs = load_configs(str(args.config))
             for config in configs['list']:
-                if configs['verbose']: print("Backup for {0}@{1}".format(config['user'],config['imap']))
+                print("Backup for {0}@{1}".format(config['user'],config['imap']))
                 eb = EmailBackup(config['user'],config['imap'],config['passwd'],configs['verbose'])
                 if configs['verbose']: print("Get mail list")
                 eb.get_mail_list(str(config['folder']))
