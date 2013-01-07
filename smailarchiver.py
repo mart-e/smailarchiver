@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-""" SMail archiver 0.3
+"""SMail archiver 0.4
 
 Secured mail archiver
 All mails are encypted using AES256 and
@@ -31,7 +31,7 @@ if sys.version < '3':
     # in python 3 raw_input does not exist anymore
     input = raw_input
 
-VERSION = "0.1"
+VERSION = "0.4"
 AES_BLOCK_SIZE = AES.block_size # 16
 AES_KEY_SIZE = 32 # AES-256 (16, 24, 32)
 SIG_SIZE = SHA256.digest_size # 32
