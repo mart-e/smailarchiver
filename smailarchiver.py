@@ -316,16 +316,19 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--imap", help="IMAP email server") # "imap.bar.com"
     parser.add_argument("-p", "--passwd", help="email password") # "password"
     parser.add_argument("-f", "--folder", help="inbox folder name", default="INBOX") # '"[Gmail]/All Mail"'
-    parser.add_argument("-k", "--keys", help="key/salt file", default="keys")
-    parser.add_argument("-P", "--promp", help="promp for password of keys", action="store_true")
+
+    parser.add_argument("-e", "--encrypt", help="enable encryption", action="store_true")
+    parser.add_argument("-k", "--keys", help="key/salt file (ignored if encryption disabled)", default="keys")
+    parser.add_argument("-P", "--promp", help="promp for password of keys (ignored if encryption disabled)", action="store_true")
+
+    parser.add_argument("-z", "--compress", help="Compress the mail data before encrypting", action="store_true")
 
     parser.add_argument("-c", "--config", help="JSON file containing a list of configuration")
+    
     parser.add_argument("-r", "--restore", help="restore the mails contained in a folder. "\
                             "Extension is used to determine the storage type. "\
                             "Restored in a single .mbox file.")
     
-    parser.add_argument("-z", "--compress", help="Compress the mail data before encrypting", action="store_true")
-
     parser.add_argument("--verbose", help="verbose mode", action="store_true")
     parser.add_argument('--version', action='version', version='%(prog)s {}'.format(VERSION))
 
