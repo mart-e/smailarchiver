@@ -1,11 +1,17 @@
-SMail Archiver is a python script that can be used to backup an email account
+SMail Archiver 0.4 is a python script that can be used to backup an email account
 It uses the pycrypto library and requires python 2.7 or above.
 
 Backup:
     The emails are fetch using IMAP. UID of emails are used to identify emails.
-    Each mail is saved in {user}/{uid}.mbox.
+    Each mail is saved in mbox format using the format {user}/{uid}.{ext}.
+    {ext} represent the options enable and successive operations.
+    {ext} of backup email always starts with '.mbox'
     If the option {compress} is used, the email will be compressed usign GZip
-    and the result is saved in {user}/{uid}.gz.mbox.
+    and the '.gz' extension is happend.
+    If the option {encrypt} is used, the email will be encrypted using AES
+    and the '.enc' extension is added.
+    A compressed and encrypted email will then have the extension .mbox.gz.enc.
+    Compression is always realised before encryption for better results.
     Running the command several time won't overwrite the files, existing mbox
     file are ignored.
 
@@ -36,11 +42,13 @@ Security:
     the password and it could be an additionnal protection to protect the salt
     file in case of weak password.
 
-Usage:
-    usage: smailarchiver [-h] [-u USER] [-i IMAP] [-p PASSWD] [-f FOLDER]
-                         [-k KEYS] [-P] [-c CONFIG] [-d DECRYPT] [-z] [--verbose]
-                         [--version]
+    The result of encryption is saved in BASE64 format.
 
+Usage:
+    usage: smailarchiver [-h] [-u USER] [-i IMAP] [-p PASSWD] [-f FOLDER] [-e]
+                         [-k KEYS] [-P] [-z] [-c CONFIG] [-r RESTORE] [--verbose]
+                         [--version]
+    
     optional arguments:
       -h, --help            show this help message and exit
       -u USER, --user USER  email username
@@ -49,13 +57,17 @@ Usage:
                             email password
       -f FOLDER, --folder FOLDER
                             inbox folder name
-      -k KEYS, --keys KEYS  key/salt file
-      -P, --promp           promp for password of keys
+      -e, --encrypt         enable encryption
+      -k KEYS, --keys KEYS  key/salt file (ignored if encryption disabled)
+      -P, --promp           promp for password of keys (ignored if encryption
+                            disabled)
+      -z, --compress        Compress the mail data before encrypting
       -c CONFIG, --config CONFIG
                             JSON file containing a list of configuration
-      -d DECRYPT, --decrypt DECRYPT
-                            decrypt a folder containing encypted mbox
-      -z, --compress        Compress the mail data before encrypting
+      -r RESTORE, --restore RESTORE
+                            restore the mails contained in a folder. Extension is
+                            used to determine the storage type. Restored in a
+                            single .mbox file.
       --verbose             verbose mode
       --version             show program's version number and exit
     
@@ -103,6 +115,12 @@ IMAP folder:
     in the destination folder ({UID}.mbox or {UID}.gz.mbox) are skipped during
     the save process. At the decryption process, all emails in the folder will
     be merged in a {user}.mbox file.
+
+Update:
+    When you update SMailArchiver, look out for incompatibilities.
+    The file migration.py is a script of migration of stored files to new formats
+    . Look at the content of this file for more explanations how to migrate your 
+    stored emails.
 
 Licence:
     "THE BEER-WARE LICENSE" (Revision 42):
