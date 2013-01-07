@@ -225,10 +225,12 @@ def load_configs(filename):
 
 class EmailBackup():
 
-    def __init__(self, user, imap, passwd, verbose=False):
+    def __init__(self, user, imap, passwd, encrypt=True, compress=True, verbose=False):
         self.user = user
         self.imap = imap
         self.passwd = passwd
+        self.encrypt = encrypt
+        self.compress = compress
         self.verbose = verbose
 
         self.m = imaplib.IMAP4_SSL(imap)
@@ -342,11 +344,16 @@ if __name__ == "__main__":
             configs = load_configs(str(args.config))
             for config in configs['list']:
                 print("Backup for {0}@{1}".format(config['user'],config['imap']))
-                eb = EmailBackup(config['user'],config['imap'],config['passwd'],configs['verbose'])
+                eb = EmailBackup(config['user'],config['imap'],config['passwd'],
+                                 config['encrypt'],config['compress'],
+                                 configs['verbose'])
                 if configs['verbose']: print("Get mail list")
                 eb.get_mail_list(str(config['folder']))
-                if configs['verbose']: print("Get crypto keys")
-                eb.get_crypto_keys(config['keys'],config['promp'])
+                
+                if config['encrypt']:
+                    if configs['verbose']: print("Get crypto keys")
+                    eb.get_crypto_keys(config['keys'],config['promp'])
+                
                 if configs['verbose']: print("Get items")
                 eb.get_items(config['compress'])
 
@@ -366,11 +373,16 @@ if __name__ == "__main__":
                 pwd = getpass.getpass("Enter your password: ")
 
             if args.verbose: print("Backup for {0}@{1}".format(user,imap))
-            eb = EmailBackup(user,imap,pwd,args.verbose)
+            eb = EmailBackup(user, imap, pwd,
+                             args.encrypt, args.compress,
+                             args.verbose)
             if args.verbose: print("Get mail list")
             eb.get_mail_list(str(args.folder))
-            if args.verbose: print("Get crypto keys")
-            eb.get_crypto_keys(args.keys, args.promp)
+            
+            if args.encrypt:
+                if args.verbose: print("Get crypto keys")
+                eb.get_crypto_keys(args.keys, args.promp)
+            
             if args.verbose: print("Get items")
             eb.get_items(args.compress)
     
