@@ -210,9 +210,14 @@ def load_configs(filename):
         assert 'imap' in config, "missing argument 'imap', no imap server specified"
         assert 'passwd' in config, "missing argument 'passwd', no email password specified"
         assert 'folder' in config, "missing argument 'folder', no inbox folder specified"
-        assert 'keys' in config, "missing argument 'keys', no keyfile specified"
-        assert 'promp' in config, "missing argument 'promp', does the keyfile needs a password ?"
-        config['promp'] = bool(config['promp'])
+        
+        assert 'encrypt' in config, "missing argument 'encrypt', should the data be encrypted"
+        config['encrypt'] = bool(config['encrypt'])
+        if config['encrypt']:
+            assert 'keys' in config, "missing argument 'keys', no keyfile specified for encryption"
+            assert 'promp' in config, "missing argument 'promp', does the encryption keyfile needs a password ?"
+            config['promp'] = bool(config['promp'])
+        
         assert 'compress' in config, "missing argument 'compress', should the data be compressed ?"
         config['compress'] = bool(config['compress'])
 
