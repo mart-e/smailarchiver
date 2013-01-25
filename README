@@ -2,28 +2,32 @@ SMail Archiver 0.4 is a python script that can be used to backup an email accoun
 It uses the pycrypto library and requires python 2.7 or above.
 
 Backup:
-    The emails are fetch using IMAP. UID of emails are used to identify emails.
+    The emails are fetched using IMAP. UID of emails are used to identify emails.
     Each mail is saved in mbox format using the format {user}/{uid}.{ext}.
     {ext} represent the options enable and successive operations.
     {ext} of backup email always starts with '.mbox'
     If the option {compress} is used, the email will be compressed usign GZip
-    and the '.gz' extension is happend.
+    and the '.gz' extension is added.
     If the option {encrypt} is used, the email will be encrypted using AES
     and the '.enc' extension is added.
     A compressed and encrypted email will then have the extension .mbox.gz.enc.
     Compression is always realised before encryption for better results.
-    Running the command several time won't overwrite the files, existing mbox
-    file are ignored.
+    Running the command several time will not overwrite the files, existing mbox
+    files are ignored.
 
 Restore:
     When restoring a backup, the script read the content of the specified backup
-    folder and, for each .mbox file, decrypt it and store the result in a unique
-    mbox file using the format {foldername}.mbox, overwritting potential
-    previous restoration.
+    folder and, for each file, applies the adequate operations according the
+    extension in reverse order.
+    '.enc' extension will apply a decryption of the file
+    '.gz' extension will apply a decompression of the file
+    '.mbox' extension is mandatory to indicate thr file is an email.
+
+    The result of all valid restorations is stored in a mbox file using the
+    format {foldername}.mbox, overwritting potential previous restoration.
     
-    .mbox files present in the folder but not part of the backup are likely to
-    make the program crash. If the extension is .gz.mbox, a GZip decompression
-    is processed. Other type of files are ignored.
+    Files contained in a folder are processsed in an arbitrary order (not
+    alphabetical).
     
 Security:
     The script uses AES256 in CBC mode for encryption and HMAC-SHA256 for 
@@ -31,7 +35,7 @@ Security:
     AES_KEY_SIZE (16, 24, 32). Use a different algorithms is not proposed as
     requires more change in the code.
     
-    Two possibles mode of security are possible : simple or password protected.
+    Two modes of security are possible : simple or password-protected.
     In simple mode (the variable {promp} is not set), no password from the user
     is required, the two (AES and HMAC) keys are generated using a PRNG and are
     the secret. The generated file SHOULD be protected in a secure way.
@@ -71,17 +75,17 @@ Usage:
       --verbose             verbose mode
       --version             show program's version number and exit
     
-    The optional -c CONGIF use a JSON file containing the configuration (useful
-    for cronjob for instance). It can contains the configuration for several 
+    The optional -c CONFIG uses a JSON file containing the configuration (useful
+    for cronjob for instance). It can contain the configuration for several 
     mail accounts. An example of the format used is present in 
-    config.json.example.
+    'config.json.example'.
 
     The option -d DECRYPT requires the name of the folder containing the backup
     files. The restored emails will be stored in the {DECRYPT}.mbox file.
 
 IMAP folder:
-    The saved folder is specified in the variable {folder}. By default "INBOX"
-    is used which should be available on many emails provider.
+    The processed folder is specified in the variable {folder}. By default
+    "INBOX" is used which should be available by many email providers.
     
     In the case of Gmail, all emails can be saved easily using the name 
     '"[Gmail]/All Mail"'. Note that this name can be change depending of the
@@ -112,13 +116,12 @@ IMAP folder:
     file. Note that the destination folder is specified using the {user} 
     variable and emails from the same account will be merged. Emails are
     identified with UID which are unique per message. Emails with the same UID
-    in the destination folder ({UID}.mbox or {UID}.gz.mbox) are skipped during
-    the save process. At the decryption process, all emails in the folder will
-    be merged in a {user}.mbox file.
+    in the destination folder ({UID}.mbox.{ext} depending of the options) are
+    skipped during the save process. At the decryption process, all emails in
+    the specified folder will be merged in a {user}.mbox file.
 
 Update:
     When you update SMailArchiver, look out for incompatibilities.
-    The file migration.py is a script of migration of stored files to new formats
-    . Look at the content of this file for more explanations how to migrate your 
-    stored emails.
-
+    The file 'migration.py' is a script of migration of stored files to new
+    formats. Look at the content of this file for more explanations how to
+    migrate your stored emails.
