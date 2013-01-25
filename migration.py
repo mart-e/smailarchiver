@@ -29,6 +29,7 @@ Break in compatibility history:
 """
 
 import argparse
+import json
 import os
 
 BREAK_HISTORY = [0.3]
@@ -54,10 +55,30 @@ def migrate_03(foldername):
     {UID}.gz.mbox -> compressed & encrypted file -> {UID}.mbox.gz.enc
     """
 
-    print("Migrating done from 0.3 to 0.4...")
+    print("Migrating from 0.3 to 0.4...")
 
     for filename in os.listdir(foldername):
-        if filename[-5:] == ".mbox":
+        abspath = os.path.join(foldername,filename)
+        if filename[-5:] == ".json":
+            try:
+                with open(abspath,'r') as f:
+                    config_dic = json.load(f)
+                assert 'list' in config_dic, "missing argument 'list'"
+            except:
+                # unvalid json skipping
+                pass
+            
+            # now migration
+            for config in config_dic['list']:
+                config['encrypt'] = 1
+                config['compress'] = 1
+
+            with open(abspath,'w') as f:
+                json.dump(config,f,sort_keys=True,indent=4)
+                
+            print("config file {} migrated".format(filename))
+
+        elif filename[-5:] == ".mbox":
             if filename[-8:] == ".gz.mbox":
                 destfile = "{}.mbox.gz.enc".format( filename[:-8] )
             else:
@@ -67,9 +88,9 @@ def migrate_03(foldername):
                 raise OSError("Conflict for {0}! Destination file {1} already exists".format(filename, destfile))
             else:
                 print("{0} -> {1}".format(filename,destfile))
-                os.rename(os.path.join(foldername,filename), os.path.join(foldername,destfile))
+                os.rename(abspath, os.path.join(foldername,destfile))
 
-    print("done.")
+    print("Done.")
 
 
 if __name__ == "__main__":
