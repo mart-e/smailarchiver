@@ -6,7 +6,7 @@ Backup:
     Each mail is saved in mbox format using the format {user}/{uid}.{ext}.
     {ext} represent the options enable and successive operations.
     {ext} of backup email always starts with '.mbox'
-    If the option {compress} is used, the email will be compressed usign GZip
+    If the option {compress} is used, the email will be compressed using GZip
     and the '.gz' extension is added.
     If the option {encrypt} is used, the email will be encrypted using AES
     and the '.enc' extension is added.
