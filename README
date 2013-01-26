@@ -80,8 +80,8 @@ Usage:
     mail accounts. An example of the format used is present in 
     'config.json.example'.
 
-    The option -d DECRYPT requires the name of the folder containing the backup
-    files. The restored emails will be stored in the {DECRYPT}.mbox file.
+    The option -r RESTORE requires the name of the folder containing the backup
+    files. The restored emails will be stored in the {RESTORE}.mbox file.
 
 IMAP folder:
     The processed folder is specified in the variable {folder}. By default
