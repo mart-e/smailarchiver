@@ -117,7 +117,7 @@ IMAP folder:
     variable and emails from the same account will be merged. Emails are
     identified with UID which are unique per message. Emails with the same UID
     in the destination folder ({UID}.mbox.{ext} depending of the options) are
-    skipped during the save process. At the decryption process, all emails in
+    skipped during the save process. At the restauration process, all emails in
     the specified folder will be merged in a {user}.mbox file.
 
 Update:
