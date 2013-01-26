@@ -26,6 +26,7 @@ eg: if a format change was integrated between version 0.3 and 0.4 and between
 Break in compatibility history:
   * 0.3 -> 0.4
 
+Copyright (C) 2013 Martin Trigaux - MIT license
 """
 
 import argparse
