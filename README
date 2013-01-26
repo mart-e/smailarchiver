@@ -65,7 +65,7 @@ Usage:
       -k KEYS, --keys KEYS  key/salt file (ignored if encryption disabled)
       -P, --promp           promp for password of keys (ignored if encryption
                             disabled)
-      -z, --compress        Compress the mail data before encrypting
+      -z, --compress        Compress the mail data
       -c CONFIG, --config CONFIG
                             JSON file containing a list of configuration
       -r RESTORE, --restore RESTORE

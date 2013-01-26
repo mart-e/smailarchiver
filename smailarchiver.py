@@ -333,7 +333,7 @@ if __name__ == "__main__":
     parser.add_argument("-k", "--keys", help="key/salt file (ignored if encryption disabled)", default="keys")
     parser.add_argument("-P", "--promp", help="promp for password of keys (ignored if encryption disabled)", action="store_true")
 
-    parser.add_argument("-z", "--compress", help="Compress the mail data before encrypting", action="store_true")
+    parser.add_argument("-z", "--compress", help="Compress the mail data", action="store_true")
 
     parser.add_argument("-c", "--config", help="JSON file containing a list of configuration")
     
