@@ -1,0 +1,137 @@
+SMail Archiver 0.4 est un script python permettant de créer un backup d'un
+compte email. Il utilise la librairie pycrypto et est compatible python 2.7 ou +
+
+Backup:
+    Les emails sont récupérés en utilisant IMAP. L'UID des emails est utilisé
+    pour identifier les emails. Chaque message est stocké au format mbox en
+    utilisant la notation {user}/{uid}.{ext}.
+    {ext} représente les options activées et opérations successives.
+    {ext} d'un backup réalisé avec SMailArchiver commence toujours par '.mbox'
+    Si l'option {compress} est utilisé, le message sera compressé en utilisant 
+    GZip et l'extension '.gz' est ajoutée.
+    Si l'option {encrypt} est utilisée, l'email sera chiffré en utilisant AES et
+    l'extension '.enc' est ajoutée.
+    Un message compressé et chiffré aura donc l'extension '.mbox.gz.enc'.
+    La compression est toujours réalisée avant le chiffrement pour de meilleurs
+    résultats (le chiffrement casse les répétitions et patterns).
+    Exécter le programme plusieurs fois ne va pas réécrire les fichiers, les 
+    emails précédements sauvegardés seront ignorés sur base de leur nom.
+
+Restauration:
+    Lors de la restauration d'un backup, le script lit le contenu du dossier
+    spécifié et, pour chaque fichier, applique une opération sur base de
+    l'extension de ce dernier dans l'ordre inverse.
+    '.enc' va appliquer un déchiffrement du fichier
+    '.gz' va appliquer une décompression du fichier
+    '.mbox' est obligatoire pour indiquer que le fichier est un email
+
+    Le résultat de toutes les restaurations valides sont stockées dans un
+    fichier au format {nomdedossier}.mbox, écrasant un potentiel fichier déjà
+    existant d'une restauration précédente.
+    
+    Les fichiers contenu dans le dossier cible sont restaurés dans un ordre
+    arbitraire (non alphabétique).
+    
+Sécurité:
+    Le script utilise AES256 en mode CBC pour le chiffrement et HMAC-SHA256
+    pour la signature. La taille de la clef AES peut être modifiée en changeant
+    la variable AES_KEY_SIZE (16, 24, 32). L'usage d'un autre algorithme n'est 
+    pas proposé actuellement car nécessite de plus gros changements dans le code.
+
+    Deux modes de sécurité sont possibles : simple ou avec un mot de passe.
+    En mode simple (le paramètre {promp} n'est pas utilisé), aucun mot de passe
+    n'est requis de l'utilisateur, les deux (AES et HMAC) clefs sont générées
+    utilisant le PRNG de pycrypto et sont le secret. Ce fichier DOIT être 
+    protégé de l'accès de tous.
+    En mode avec mot de passe (le paramètre {promp} est utilisé), un mot de 
+    passe est demandé et les deux clefs sont générées en utilisant ce mot de 
+    passe et un salt constitué de bits aléatoires avec l'algorithme PBKDF2. Le
+    fichier généré contient le salt et ne nécessite plus de protection. 
+    Néanmoins, la force de la sécurité repose sur la complexité du mot de passe.
+    Protéger le salt pourrait être une protection supplémentaire en cas 
+    d'utilisation d'un mot de passe faible.
+
+    Le résultat du chiffrement et signature est stocké au format BASE64.
+
+Utilisation:
+    usage: smailarchiver [-h] [-u USER] [-i IMAP] [-p PASSWD] [-f FOLDER] [-e]
+                         [-k KEYS] [-P] [-z] [-c CONFIG] [-r RESTORE] [--verbose]
+                         [--version]
+    
+    optional arguments:
+      -h, --help            montre ce message et ferme le programme
+      -u USER, --user USER  utilisateur de l'email
+      -i IMAP, --imap IMAP  serveur IMAP
+      -p PASSWD, --passwd PASSWD
+                            mot de passe du compte email
+      -f FOLDER, --folder FOLDER
+                            nom du dossier à sauvegarder
+      -e, --encrypt         active le chiffrement
+      -k KEYS, --keys KEYS  fichier de clef/salt (ignoré si le chiffrement est
+                            désactivé)
+      -P, --promp           demande un mot de passe pour les clefs (ignoré si le
+                            chiffrement est désactivé)
+      -z, --compress        compresser le corps de l'email
+      -c CONFIG, --config CONFIG
+                            fichier JSON contenant la liste de configurations
+      -r RESTORE, --restore RESTORE
+                            restaure les emails contenus dans un dossier. 
+                            L'extension est utilisée pour déterminer le type de 
+                            stockage utilisé. Restauré en un seul fichier .mbox.
+      --verbose             mode verbeux
+      --version             montre la version du programme
+    
+    L'option -c CONFIG utilise un fichier JSON contenant la configuration (utile
+    pour réalisé une tâche cron par exemple). Il peut contenir la configuration
+    pour plusieurs comptes emails. Un exemple de format utilisé est montré dans
+    le fichier 'config.json.example'.
+    
+    L'option -r RESTORE demande le nom du fichier contenant le backup. Les 
+    emails restaurés sont stockés dans le fichier {RESTORE}.mbox.
+
+Dossier IMAP:
+    Le dossier sauvegardé est spécifié dans la variable {folder}. Par défault
+    "INBOX" est utilisé et devrait être disponible sur la plus part des emails.
+    
+    Dans le cas de l'utilisation de Gmail, tous les emails peuvent être 
+    sauvegardés facilement en utilisant le dossier '"[Gmail]/All Mail"'. Notez
+    que ce nom peut changer en fonction de la langue du compte. Lisez les 
+    instructions suivantes pour obtenir plus d'information sur l'utilisation du
+    dossier "all mail" dans Gmail :
+    http://www.sebsauvage.net/wiki/doku.php?id=gmail_archiver
+    
+    Quand un nom de dossier contient des espace (comme l'exemple de Gmail 
+    ci-dessus), vous aurez sans doute besoin d'entourer deux fois le nom du
+    dossier de guillemets ou d'appostrophes ("'nom de dossier'" ou '"nom de 
+    dossier"'). Ce bug a été détecté en Python 3.x.
+
+    Pour connaitre quels dossiers IMAP sont disponibles, ouvrez une console
+    python et utilisez les commandes suivantes :
+
+    >>> import imaplib
+    >>> m = imaplib.IMAP4_SSL("imap.bar.com")
+    >>> m.login("foo@bar.com","monmotdepasse")
+    ('OK', [b'Logged in'])
+    >>> m.list()
+    ('OK', [b'(\\HasNoChildren) "." "Junk"', b'(\\HasNoChildren) "." "Trash"', b
+    '(\\HasNoChildren) "." "Drafts"', b'(\\HasNoChildren) "." "Sent"', b'(\\HasN
+    oChildren) "." "INBOX"'])
+
+    (ou `m.list("nomdedossier")` pour les sous-dossiers)
+    
+    Vous ne pouvez spécifier qu'un dossier IMAP par configuration. Cependant,
+    vous pouvez spécifiez plusieurs configuration pour le même compte email dans
+    le fichier config.json. Notez que le dossier de destination utilisé est
+    déterminé par la variable {user}, les emails pour un même compte seront donc
+    mélangés dans le même dossier. Les emails sont identifiés avec l'UID qui 
+    sont uniques par message. Des messages avec le même UID dans le dossier de 
+    destination ({UID}.mbox.{ext} en fonction des options activées) seront 
+    ignorés pendant la sauvegarde. Lors de la restauration, tous les emails d'un
+    même dossier seront fusionnés en un fichier {user}.mbox.
+
+Mise à jour:
+    Lorsque vous mettez à jour SMailArchiver, vérifiez les possibles 
+    incompatibilités.
+    Le fichier 'migration.py' est un script de migration pour mettre à jour les 
+    emails déjà sauvegardés avec une précédente version. Lisez le contenu de ce
+    fichier pour avoir plus d'information sur l'utilisation du programme.
