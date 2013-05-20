@@ -1,9 +1,14 @@
 SMail Archiver
 ==============
 
-SMail Archiver 0.4 is a python script that can be used to backup an email account.
+SMail Archiver 0.4 is a python script to backup an email account with encryption
+and compression capabilities.
 
-# Version history
+It can either be used in interactive mode from the command line or fully
+programmed using a configuration file (eg: to be used in a cron job). Each email
+is saved individually to allow incremental save.
+
+## Version history
 0.5 2013-05-? (soon)
   * Better wizard mode
   * Allow backup of multiple IMAP folder
@@ -20,9 +25,9 @@ SMail Archiver 0.4 is a python script that can be used to backup an email accoun
 
 # Requirements
 * python 2.7 or above (compatible python 3)
-* pycrypto
+* [pycrypto](https://pypi.python.org/pypi/pycrypto) (2.4 or above)
 
-# Backup
+## Backup
 The emails are fetched using IMAP. UID of emails are used to identify emails.
 Each mail is saved in mbox format using the filename format `{user}/{uid}.{ext}`.
 
@@ -40,7 +45,7 @@ Compression is always realised before encryption for better results.
 Running the command several time will not overwrite the files, existing mbox
 files are ignored.
 
-# Restore
+## Restore
 When restoring a backup, the script read the content of the specified backup
 folder and, for each file, applies the adequate operations according the
 extension in reverse order.
@@ -54,7 +59,7 @@ format `{foldername}.mbox`, overwritting potential previous restoration.
 Files contained in a folder are processsed in an arbitrary order defined by the
 IMAP server (not alphabetical).
     
-# Security
+## Security
 The script uses AES256 in CBC mode for encryption and HMAC-SHA256 for 
 signature. The size of the AES key can be changed with the variable 
 AES_KEY_SIZE representing the number of bytes for the key (16, 24 or 32).
@@ -72,7 +77,7 @@ file in case of weak password.
 
 The result of encryption is saved in BASE64 format.
 
-# Usage
+## Usage
 ```
 usage: smailarchiver [-h] [-u USER] [-i IMAP] [-p PASSWD] [-f FOLDER] [-e]
                      [-k KEYS] [-P] [-z] [-c CONFIG] [-r RESTORE] [--verbose]
@@ -109,7 +114,7 @@ mail accounts. An example of the format used is present in
 The option `-r RESTORE` requires the name of the folder containing the backup
 files. The restored emails will be stored in the `{RESTORE}.mbox` file.
 
-# IMAP folder
+## IMAP folder
 
 The processed folder is specified in the variable `folder`. By default
 `"INBOX"` is used which should be available by many email providers.
@@ -146,7 +151,7 @@ in the destination folder (`{UID}.mbox.{ext}` depending of the options) are
 skipped during the save process. At the restauration process, all emails in
 the specified folder will be merged in a `{user}.mbox` file.
 
-# Update
+## Update
 When you update SMailArchiver, watch out for incompatibilities.
 The file `migration.py` is a script of migration of stored files to new
 formats. Look at the content of this file for more explanations how to
