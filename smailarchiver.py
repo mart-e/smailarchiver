@@ -20,6 +20,7 @@ import getpass
 import imaplib
 import json
 import os
+import string
 import sys
 import zlib
 
@@ -123,10 +124,17 @@ class EmailBackup():
         if self.verbose: print("Found {0} emails.".format(len(ids)))
 
         # prepare the path
-        foldername = self.user
-        if os.path.isfile(foldername):
-            raise OSError("A file with the same name as the desired dir, '%s', already exists." % newdir)
+        valid_chars = "-_.()@ %s%s" % (string.ascii_letters, string.digits)
+        valid_mailbox = ''.join(c for c in mailbox if c in valid_chars)
+        valid_user = ''.join(c for c in self.user if c in valid_chars)
+        foldername = os.path.join(valid_user, valid_mailbox)
+        if os.path.isfile(valid_user):
+            raise OSError("A file with the same name as the desired dir, '%s', already exists." % valid_user)
+        if not os.path.isdir(valid_user):
+            os.makedirs(valid_user, mode=0o777)
 
+        if os.path.isfile(foldername):
+            raise OSError("A file with the same name as the desired dir, '%s', already exists." % foldername)
         if not os.path.isdir(foldername):
             os.makedirs(foldername, mode=0o777)
 
