@@ -4,7 +4,7 @@
       "imap":"imap.bar.com",
       "passwd":"monkey1",
       "folder":"INBOX",
-      "encyrpt":1,
+      "encrypt":1,
       "keys":"foo.keys",
       "promp":1,
       "compress":1},
