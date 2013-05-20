@@ -1,7 +1,7 @@
 SMail Archiver
 ==============
 
-SMail Archiver 0.4 is a python script to backup an email account with encryption
+SMail Archiver 0.5 is a python script to backup an email account with encryption
 and compression capabilities.
 
 It can either be used in interactive mode from the command line or fully
