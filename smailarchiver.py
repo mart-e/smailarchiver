@@ -87,16 +87,6 @@ class EmailBackup():
         self.m = imaplib.IMAP4_SSL(imap)
         self.m.login(user, passwd)
 
-    def get_mail_list(self, mailbox='INBOX'):
-        """Return the list of UID in the mailbox folder"""
-        status, msg = self.m.select(mailbox, True)
-        if status != 'OK':
-            raise Exception(msg[0])
-
-        resp, items = self.m.uid('search', None, "ALL")
-        self.items = items[0].split()
-        if self.verbose: print("Found {0} emails.".format(len(self.items)))
-
     def get_crypto_keys(self, key_file, passwd=None, promp=False):
         """Load the encryption and signature key
 
@@ -113,29 +103,36 @@ class EmailBackup():
             self.enc_key, self.sig_key = generate_new_keys(key_file, passwd)
         return (self.enc_key, self.sig_key)
 
-    def get_items(self):
-        """Fetch and process each email in self.items
+    def fetch_emails(self, mailbox='INBOX'):
+        """Fetch and process each email
 
         Depending of the arguments the files will be compressed or/and encrypted
         The files' extensions depends of the parameters
         .mbox is always used (initial mail format when retrieved)
         .gz is added if compression is enabled
         .enc is added if encryption is enabled
-        compression is always done before encryption (better results)
-        a compressed and encypted mail will be stored as file.mbox.gz.enc
+        Compression is always done before encryption (better results).
+        A compressed and encypted mail will be stored as file.mbox.gz.enc
         """
+        status, msg = self.m.select(mailbox, True)
+        if status != 'OK':
+            raise Exception(msg[0])
+
+        resp, items = self.m.uid('search', None, "ALL")
+        ids = items[0].split()
+        if self.verbose: print("Found {0} emails.".format(len(ids)))
 
         # prepare the path
         foldername = self.user
         if os.path.isfile(foldername):
-            raise OSError("a file with the same name as the desired dir, '%s', already exists." % newdir)
+            raise OSError("A file with the same name as the desired dir, '%s', already exists." % newdir)
 
         if not os.path.isdir(foldername):
             os.makedirs(foldername, mode=0o777)
 
         # get the items
-        count = len(self.items)
-        for email_uid in self.items:
+        count = len(ids)
+        for email_uid in ids:
 
             filename = os.path.join(foldername, "{}.mbox".format(email_uid.decode()))
             if self.compress:
@@ -184,7 +181,8 @@ def restore_folder(foldername, key_file, passwd=None, promp=False):
         .mbox.gz
         .mbox.gz.enc
         .mbox.enc
-    The result is writen in a {foldername}.mbox file"""
+    The result is writen in a {foldername}.mbox file
+    """
 
     if promp and not passwd:
         passwd = getpass.getpass("Enter your encryption/signature password: ")
@@ -261,7 +259,7 @@ def generate_new_keys(key_file="keys", password=None, enc_key_size=AES_KEY_SIZE,
 
 
 def load_keys(key_file, password=None, enc_key_size=AES_KEY_SIZE, sig_key_size=SIG_SIZE):
-    """ Load the keys from the specified file
+    """Load the keys from the specified file
 
     If a password is specified, the key file contains the salt that is used to
         generate the key using PBKDF2 and the password
@@ -311,6 +309,8 @@ def load_configs(filename):
 
     if 'verbose' in config_dic:
         config_dic['verbose'] = bool(config_dic['verbose'])
+    else:
+        config_dic['verbose'] = False
 
     assert 'list' in config_dic, "missing argument 'list', no backup configuration specified "
 
@@ -369,9 +369,12 @@ def wizard_mode():
         else:
             compress = True
 
-        imap_folder = input("IMAP folder to backup [INBOX] ")
-        eb.get_mail_list(str(imap_folder))
-        eb.get_items()
+        imap_folder = input("IMAP folder to backup (default: INBOX): ")
+        if type(imap_folder) == list:
+            for folder in imap_folder:
+                eb.fetch_emails(str(folder))
+        else:
+            eb.fetch_emails(str(imap_folder))
 
 
 if __name__ == "__main__":
@@ -412,18 +415,19 @@ if __name__ == "__main__":
                 eb = EmailBackup(config['user'],config['imap'],config['passwd'],
                                  config['encrypt'],config['compress'],
                                  configs['verbose'])
-                if configs['verbose']: print("Get mail list")
-                eb.get_mail_list(str(config['folder']))
 
                 if config['encrypt']:
                     if configs['verbose']: print("Get crypto keys")
                     eb.get_crypto_keys(config['keys'],config['promp'])
 
-                if configs['verbose']: print("Get items")
-                eb.get_items()
+                if configs['verbose']: print("Get emails")
+                if type(config['folder']) == list:
+                    for item in config['folder']:
+                        eb.fetch_emails(str(item))
+                else:
+                    eb.fetch_emails(str(config['folder']))
 
         else:
-
             if args.user:
                 user = str(args.user)
             else:
@@ -445,8 +449,9 @@ if __name__ == "__main__":
                 if args.verbose: print("Get crypto keys")
                 eb.get_crypto_keys(args.keys, args.promp)
 
-            if args.verbose: print("Get mail list")
-            eb.get_mail_list(str(args.folder))
-
-            if args.verbose: print("Get items")
-            eb.get_items()
+            if args.verbose: print("Get emails")
+            if type(args.folder) == list:
+                for item in args.folder:
+                    eb.fetch_emails(str(item))
+            else:
+                eb.fetch_emails(str(args.folder))

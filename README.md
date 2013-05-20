@@ -9,7 +9,7 @@ programmed using a configuration file (eg: to be used in a cron job). Each email
 is saved individually to allow incremental save.
 
 ## Version history
-0.5 2013-05-? (soon)
+0.5 2013-05-20
   * Better wizard mode
   * Allow backup of multiple IMAP folder
 

@@ -12,7 +12,7 @@
       "imap":"imap.example.com",
       "passwd":"qwerty1",
       "encrypt":0,
-      "folder":"Sent",
+      "folder":["INBOX","Sent"],
       "compress":0}
  ],
  "verbose":1
